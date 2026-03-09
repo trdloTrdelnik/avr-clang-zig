@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 
-const OUTPUT_DIR = path self ./build-clang/
+const OUTPUT_DIR = path self ./build-zig/
 const MAIN_OBJ_FILE = $OUTPUT_DIR | path join main.o
 const MAIN_ELF_FILE = $OUTPUT_DIR | path join main.elf
 
@@ -15,7 +15,7 @@ const MCU = "atmega328p"
 const F_CPU = "16000000UL"
 
 # Compiler and tools
-const CC = "clang-20"
+const CC = [zig cc]
 const LD = "clang-20"
 
 let gcc_install = which avr-gcc | get path | first | path dirname | path join ".." | path expand
@@ -39,12 +39,13 @@ let c_flags = [
 	-std=c99
 	-fno-builtin
 	-fno-sanitize=undefined
-	-gdwarf-4
+	# -gdwarf-4 # zig compiler doesn't like adding debug symbols..
 ] | append $system_includes
 
 let clang_options = [
 	-ffreestanding
 	-target avr-freestanding
+	-mcpu=($MCU) # zig needs both -mmcu and -mcpu for some reason..
 	--gcc-toolchain=($gcc_install)
 	--gcc-triple=avr
 ]
@@ -58,7 +59,8 @@ let ld_flags = [
 # Build
 print $"(ansi green)Building(ansi reset)"
 let all_build_flags = $c_flags ++ $clang_options ++ [
-	-g
+	# -g # zig compiler doesn't like adding debug symbols..
+	# -rtlib=none
 	-ffunction-sections
 	-fdata-sections
 	-save-temps=obj
