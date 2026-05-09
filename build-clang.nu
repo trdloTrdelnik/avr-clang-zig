@@ -15,8 +15,8 @@ const MCU = "atmega328p"
 const F_CPU = "16000000UL"
 
 # Compiler and tools
-const CC = "clang-20"
-const LD = "clang-20"
+const CC = "clang-21"
+const LD = "clang-21"
 
 let gcc_install = which avr-gcc | get path | first | path dirname | path join ".." | path expand
 
