@@ -2,23 +2,21 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define LED_PIN PB5  // Pin 13 on Arduino Uno (built-in LED)
+#define LED_PIN PC7  // Led pin on ATmega324pb Xplained Pro
 
 int main(void) {
 	// Set LED pin as output
-	DDRB |= (1 << LED_PIN);
+	DDRC |= (1 << LED_PIN);
 
 	while (1) {
 		// Turn LED on
-		PORTB |= (1 << LED_PIN);
-		_delay_ms(500);
+		PORTC |= (1 << LED_PIN);
+		_delay_ms(100);
 
 		// Turn LED off
-		PORTB &= ~(1 << LED_PIN);
-		_delay_ms(500);
+		PORTC &= ~(1 << LED_PIN);
+		_delay_ms(3000);
 	}
-
-	while (1) {};
 
 	return 0;
 }

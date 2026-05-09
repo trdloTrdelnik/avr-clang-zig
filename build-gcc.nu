@@ -11,10 +11,10 @@ if (not ($OUTPUT_DIR | path exists)) {
 }
 
 # Target microcontroller
-const MCU = "atmega328p"
+const MCU = "atmega324pa" # pb not fully supported
 
-# Clock frequency (16MHz for Arduino Uno)
-const F_CPU = "16000000UL"
+# Clock frequency
+const F_CPU = "1000000UL" # 1MHz
 
 # Compiler and tools
 const CC = "avr-gcc"
