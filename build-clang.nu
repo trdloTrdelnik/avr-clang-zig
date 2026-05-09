@@ -1,5 +1,7 @@
 #!/usr/bin/env nu
 
+use utils.nu print-and-run-cmd
+
 const OUTPUT_DIR = path self ./build-clang/
 const MAIN_OBJ_FILE = $OUTPUT_DIR | path join main.o
 const MAIN_ELF_FILE = $OUTPUT_DIR | path join main.elf
@@ -29,14 +31,21 @@ let system_includes = [
 	each { |e| $"-isystem ($e)" | split row " " } |
 	flatten
 
-# Compiler flags
-let c_flags = [
+let COMMON_FLAGS = [
 	-mmcu=($MCU)
 	-DF_CPU=($F_CPU)
+]
+
+# Compiler flags
+let CFLAGS = [
 	-Os
 	-Wall
 	-Wextra
 	-std=c99
+	-g
+	-c
+	-ffunction-sections
+	-fdata-sections
 	-fno-builtin
 	-fno-sanitize=undefined
 	-gdwarf-4
@@ -50,35 +59,20 @@ let clang_options = [
 ]
 
 # Linker flags
-let ld_flags = [
+let LDFLAGS = [
 	--gc-sections
 	-lgcc
 ] | each { |e| $"-Wl,($e)" }
 
-# Build
 print $"(ansi green)Building(ansi reset)"
-let all_build_flags = $c_flags ++ $clang_options ++ [
-	-g
-	-ffunction-sections
-	-fdata-sections
+print-and-run-cmd $CC ...$COMMON_FLAGS ...$CFLAGS ...$clang_options ...[
 	-save-temps=obj
-	-c
 	main.c
 	-o $MAIN_OBJ_FILE
 ]
-let cmd_string = $"($CC | str join ' ') ($all_build_flags | str join ' ')"
-print $"(ansi blue)($cmd_string)(ansi reset)"
-^$CC ...$all_build_flags -v
 
-# Link
-let all_link_args = [
-	...$c_flags
-	...$clang_options
-	...$ld_flags
+print $"(ansi green)Linking(ansi reset)"
+print-and-run-cmd $LD ...$COMMON_FLAGS ...$LDFLAGS ...$clang_options ...[
 	$MAIN_OBJ_FILE
 	-o $MAIN_ELF_FILE
 ]
-print $"(ansi green)Linking(ansi reset)"
-let cmd_string = $"($LD) ($all_link_args | str join ' ')"
-print $"(ansi blue)($cmd_string)(ansi reset)"
-^$LD ...$all_link_args -v
