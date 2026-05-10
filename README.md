@@ -1,7 +1,7 @@
 
 # AVR Blinky Using Clang and Zig
 
-Experimenting trying to build an AVR project with Zig.
+Testing Zig's C interop for embedded AVR projects.
 
 - [x] Step 1: Create a blinky project an build with AVR GCC
 - [x] Step 2: Build with Clang
@@ -10,6 +10,9 @@ Experimenting trying to build an AVR project with Zig.
 - [ ] Step 4: Add some Zig code.
 
 - [x] Verify: Flash and run all builds on target
+
+Deliberately created individual shell scripts for each build and keeping them
+as similar as possible such that it is easy to diff and see the progression.
 
 ## Findings
 
@@ -37,8 +40,6 @@ linker produces the following warnings,
 clang-21: warning: no avr-libc installation can be found on the system, cannot link standard libraries [-Wavr-rtlib-linking-quirks]
 clang-21: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked [-Wavr-rtlib-linking-quirk
 ```
-Thus it seems like Clang does not have its own AVR standard library and relies
-fully on GCC for linkerscripts, startup code and so on.
 
 Interestingly, adding `--gcc-toolchain` and `--gcc-triple` and Clang now
 simply opts for invoking `avr-ld` when linking instead of using its own
@@ -79,7 +80,7 @@ To summarize:
   linkerscripts, the standard library, linking etc.). Although it might be
   possible to extract the required components for a fully native Clang build.
 - Any compile units that uses utilities from the GCC toolchain that depends on
-  GCC built-ins must be compiled with `avr-gcc`.
+  built-ins functions must be compiled with `avr-gcc` or ported.
 - No debug information when building with Zig (seems to be a bug).
 
 
