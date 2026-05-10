@@ -2,7 +2,7 @@
 
 use utils.nu print-and-run-cmd
 
-const OUTPUT_DIR = path self ./build-zig/
+const OUTPUT_DIR = path self ./build-zig-cc/
 const MAIN_OBJ_FILE = $OUTPUT_DIR | path join main.o
 const MAIN_ELF_FILE = $OUTPUT_DIR | path join main.elf
 
@@ -69,7 +69,7 @@ let LDFLAGS = [
 print $"(ansi green)Building(ansi reset)"
 print-and-run-cmd $CC ...$COMMON_FLAGS ...$CFLAGS ...$clang_options ...[
 	-save-temps=obj
-	main.zig
+	main.c
 	-o $MAIN_OBJ_FILE
 ]
 

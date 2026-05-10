@@ -7,12 +7,17 @@ Testing Zig's C interop for embedded AVR projects.
 - [x] Step 2: Build with Clang
 - [x] Step 3: Use 'zig cc' as drop-in Clang replacement (NOTE: must still link
   with avr-ld manually, no auto-invocation like Clang does)
-- [ ] Step 4: Add some Zig code.
+- [x] Step 4: Add some Zig code.
 
 - [x] Verify: Flash and run all builds on target
 
 Deliberately created individual shell scripts for each build and keeping them
-as similar as possible such that it is easy to diff and see the progression.
+as similar as possible such that it is easy to diff and see the progression,
+which is as follows:
+- build-gcc
+- build-clang
+- build-zig-cc
+- build-zig
 
 ## Findings
 
@@ -59,7 +64,41 @@ on top of what is provided by Clang. So unsurprisingly `zig cc` fails to link
 the project. I was unable to make `zig cc` invoke `avr-ld` automatically like
 Clang does.
 
-### Using Zig's build system
+### Porting main.c to main.zig
+
+Initially thought I could leverage Zig's C interop to import `avr/io.h` and
+`util/delay.h` to use the same register definitions and utility functions as
+you would in a C-based AVR project. However this does not work due to
+limitations in Zig's C translator. The register definitions uses pointer
+casting and dereferencing which Zig is currently unable to deal with:
+```c
+#define _MMIO_BYTE(mem_addr) (*(volatile uint8_t *)(mem_addr))
+```
+
+Zig gives the following error:
+```
+cimport.zig:688:24: error: unable to translate C expr: unexpected token 'volatile'
+pub const _MMIO_BYTE = @compileError("unable to translate C expr: unexpected token 'volatile'");
+```
+
+And for the delay utility functions it seems like it correctly in-lines
+`_delay_ms` but fails to inline the nested `_delay_loop_2` which results in a
+linker error.
+
+Hence `main.zig` ends up not using any of GCC standard library at all though I
+still link with GCC to avoid dealing with a custom linkerscript and startup
+code.
+
+Moreover, I initially tried using Zig version 0.16.0, but when trying to
+compile main.zig I got the following error:
+```
+error: Alias and aliasee types don't match (Producer: 'zig 0.16.0' Reader: 'LLVM 21.1.8')
+```
+
+Chaning to Zig version 0.15.2 solved the problem (changed to stable branch in
+nix flake).
+
+### Using Zig's build system (not tested)
 
 Should be possible to use Zig's build system with AVR projects though I would
 recommend shelling out to `avr-ld` when linking.
@@ -71,16 +110,17 @@ dependencies to get incremental rebuilds to work properly.
 
 ## Conclusion
 
-AVR support in Clang (and also Zig) is limited when it comes to linking. AVR
-projects are thus simply not the best testbed for testing out C interop with
-`zig cc` as it's not the drop-in replacement as advertised.
+Zig's C interop proved to be a bit to lacking to provide the `zig cc` drop in
+replacement as advertised. My initial theory was that if I could get a working
+Clang build up and running then integrating Zig using `zig cc` should be
+trivial. This was almost true except that I had to fallback to invoking either
+Clang or GCC directly at the link step. Linkning with Zig should still be
+possible though, I just could not get it to work with `zig cc`.
 
-To summarize:
-- The AVR GCC toolchain is still needed (for providing startup code,
-  linkerscripts, the standard library, linking etc.). Although it might be
-  possible to extract the required components for a fully native Clang build.
-- Any compile units that uses utilities from the GCC toolchain that depends on
-  built-ins functions must be compiled with `avr-gcc` or ported.
-- No debug information when building with Zig (seems to be a bug).
-
+Finally, when trying to port `main.c` to `main.zig` I found that I was unable
+to leverage the GCC standard library and utilities for register definitions
+and the delay function due to limitations in Zig C-translator. So unless your
+project relies on legacy C code one might as well throw out AVR GCC entirely
+and opt for a fully Zig-based project. That should be possible by providing
+Zig with a linkerscript for your target (and maybe some startup code?).
 

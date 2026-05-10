@@ -2,7 +2,10 @@
   description = "AVR development environment";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # zig 0.16.0 compiling for AVR is broken, use 0.15.2
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -13,6 +16,11 @@
           inherit system;
         };
 
+        # cross = pkgs.pkgsCross.avr;
+        #
+        # avr-gcc = cross.buildPackages.gcc;
+        # avr-binutils = cross.buildPackages.binutils;
+        # avr-libc = cross.avrlibc;
         avr-gcc = pkgs.callPackage ./avr-toolchain.nix {};
       in {
         devShells.default = pkgs.mkShell {
@@ -21,7 +29,7 @@
             avrdude
             gnumake
             zig
-            clang_21
+            clang_20
           ];
 
           shellHook = ''
