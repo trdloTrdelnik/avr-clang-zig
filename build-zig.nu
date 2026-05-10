@@ -18,7 +18,7 @@ const F_CPU = "1000000UL" # 1MHz
 
 # Compiler and tools
 const CC = [zig cc]
-const LD = "clang-21"
+const LD = "avr-gcc"
 
 let gcc_install = which avr-gcc | get path | first | path dirname | path join ".." | path expand
 
@@ -46,14 +46,15 @@ let CFLAGS = [
 	-c
 	-ffunction-sections
 	-fdata-sections
+	-D__DELAY_BACKWARD_COMPATIBLE__
 	-fno-builtin
 	-fno-sanitize=undefined
 	# -gdwarf-4 # zig compiler doesn't like adding debug symbols..
 ] | append $system_includes
 
 let clang_options = [
-	-ffreestanding
-	-target avr-freestanding
+	-target avr-freestanding # Zig does not accept avr-unknown-unknown
+	-fhosted # to set __STDC_HOSTED__=1
 	-mcpu=($MCU) # zig needs both -mmcu and -mcpu for some reason..
 	--gcc-toolchain=($gcc_install)
 	--gcc-triple=avr
@@ -73,7 +74,7 @@ print-and-run-cmd $CC ...$COMMON_FLAGS ...$CFLAGS ...$clang_options ...[
 ]
 
 print $"(ansi green)Linking(ansi reset)"
-print-and-run-cmd $LD ...$COMMON_FLAGS ...$LDFLAGS ...$clang_options ...[
+print-and-run-cmd $LD ...$COMMON_FLAGS ...$LDFLAGS ...[
 	$MAIN_OBJ_FILE
 	-o $MAIN_ELF_FILE
 ]

@@ -1,5 +1,5 @@
 
-# README
+# AVR Blinky Using Clang and Zig
 
 Experimenting trying to build an AVR project with Zig.
 
@@ -16,19 +16,19 @@ Experimenting trying to build an AVR project with Zig.
 ### Building with Clang
 
 Found two parameter combinations that builds:
-- 1: non-freestanding target with options:
+- 1: Hosted target:
     - `-target avr-unknown-unknown`
     - `-D__DELAY_BACKWARD_COMPATIBLE__`
-
- - 2: freestanding target
+- 2: Freestanding target:
     - `-target avr-freestanding`
     - `-ffreestanding`
 
-Option 1 is more similar to the GCC build because then `__STDC_HOSTED__=1`,
-however, we most likely want to set `__STDC_HOSTED__=0` when building with
-Clang. This is because Clang cannot expand GCC's built-ins, like
-`__builtin_avr_delay_cycles` used in `delay.h`. In other words, Clang isn't
-hosting the standard library despite being able to find and use its includes.
+Not entirely sure which is the most "correct" approach but option 1 seems to
+be more similar to the default AVR GCC settings as `__STDC_HOSTED__=1`.
+Currently the Clang build links against GCC's standard library and so both the
+options above are likely valid. One important caveat is that Clang cannot
+expand GCC built-in functions like the `__builtin_avr_delay_cycles`, which is
+why the `-D__DELAY_BACKWARD_COMPATIBLE__` define is needed.
 
 Moreover, it seems like Clang does not have linkage support for AVR targets:
 If we omit the `--gcc-toolchain` and `--gcc-triple` compiler options  then the
@@ -40,43 +40,46 @@ clang-21: warning: standard library not linked and so no interrupt vector table 
 Thus it seems like Clang does not have its own AVR standard library and relies
 fully on GCC for linkerscripts, startup code and so on.
 
-Adding `--gcc-toolchain` and `--gcc-triple` and Clang now simply opts for
-invoking `avr-ld` when linking instead of using its own linker.
+Interestingly, adding `--gcc-toolchain` and `--gcc-triple` and Clang now
+simply opts for invoking `avr-ld` when linking instead of using its own
+linker. Haven't looked into why this is the case, maybe it possible to link
+with Clang if we can provide the linkerscript and point to AVR's libc (maybe
+other components are needed as well?).
 
 ### Using Zig CC
 
 To get the build to work with `zig cc` I had to add the `-mcpu` option in
-addition to disabling debug symbols.
+addition to disabling debug symbols. Also, Zig doesn't accept
+`-target avr-unknown-unknown` like Clang in case of hosted builds, and so I
+had to change the target to `avr-freestanding` and add the `-fhosted` option.
 
 When it comes to linking I highly doubt Zig has any additional AVR support
 on top of what is provided by Clang. So unsurprisingly `zig cc` fails to link
-the project. Despite many attempts I was unable to make `zig cc` invoke
-`avr-ld` automatically like Clang.
+the project. I was unable to make `zig cc` invoke `avr-ld` automatically like
+Clang does.
 
 ### Using Zig's build system
 
-Zig's build system currently has no support for invoking GCC other than
-through opaque shell scripts. This adds some friction for compile units that
-need to be built with GCC (e.g. code that depend on GCC built-ins) as one will
-have to manually encode dependencies to get incremental rebuilds to work
-properly.
+Should be possible to use Zig's build system with AVR projects though I would
+recommend shelling out to `avr-ld` when linking.
 
-In addition, linking must be done with `avr-ld`.
+Another caveat is that if the project has any C compile units that depend on
+GCC built-ins then you would need to build those by invoking GCC through
+opaque shell scripts. In that case you might need to manually encode
+dependencies to get incremental rebuilds to work properly.
 
 ## Conclusion
 
-AVR support in Clang is limited (and by extension also Zig because I think all
-of Zig's AVR support comes exclusively from Clang). AVR projects are thus
-simply not the best testbed for testing out C interop with `zig cc` as it's
-not the drop-in replacement that it would be.
+AVR support in Clang (and also Zig) is limited when it comes to linking. AVR
+projects are thus simply not the best testbed for testing out C interop with
+`zig cc` as it's not the drop-in replacement as advertised.
 
-Based on the above findings, any Zig or Clang based AVR project must accept
-the following limitations:
+To summarize:
 - The AVR GCC toolchain is still needed (for providing startup code,
-  linkerscripts, the standard library, linking etc.).
-- Linking still has to be done with avr-ld (and this imposes constraints on
-  debug symbols, maybe other things?)
-- Any compile units that uses standard library function that depends on GCC
-  built-ins must be compiled with `avr-gcc`.
+  linkerscripts, the standard library, linking etc.). Although it might be
+  possible to extract the required components for a fully native Clang build.
+- Any compile units that uses utilities from the GCC toolchain that depends on
+  GCC built-ins must be compiled with `avr-gcc`.
+- No debug information when building with Zig (seems to be a bug).
 
 

@@ -46,14 +46,14 @@ let CFLAGS = [
 	-c
 	-ffunction-sections
 	-fdata-sections
+	-D__DELAY_BACKWARD_COMPATIBLE__
 	-fno-builtin
 	-fno-sanitize=undefined
 	-gdwarf-4
 ] | append $system_includes
 
 let clang_options = [
-	-ffreestanding
-	-target avr-freestanding
+	-target avr-unknown-unknown
 	--gcc-toolchain=($gcc_install)
 	--gcc-triple=avr
 ]
